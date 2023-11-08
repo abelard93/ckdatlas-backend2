@@ -1,0 +1,6 @@
+http://ibisdb02.scidom.de:7475/browser/
+bolt://ibisdb02.scidom.de:7689
+USR: neo4j
+PW: neo4j
+
+for R: http://ibisdb02:7475/db/data/

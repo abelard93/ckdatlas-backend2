@@ -1,0 +1,629 @@
+---
+title: | 
+    | A multi-omics resource
+    | for complex diseases
+date: "`r Sys.Date()`"
+author: Maria Wörheide
+    #highlight: kate
+output:
+  rmdformats::readthedown:
+    #code_folding: hide
+    gallery: true
+    self_contained: true
+    thumbnails: true
+    lightbox: true
+    logo: logo.png
+    includes:
+      #before_body: header.html
+      after_body: footer.html
+---
+
+
+```{r knitr_init, echo=FALSE, cache=F,warning=F,message=F}
+library(knitr)
+library(tidyverse)
+library(rmdformats)
+library(DT)
+library(neo4r)
+library(kableExtra)
+library(tibble)
+
+htmltools::img(src = knitr::image_uri(codes.makepath("neo4jserver/docu/logo.png")),
+              alt = 'logo',
+             style = 'position:absolute; top:30px; left:850px; width:195px; border:none;')
+## Global options
+
+
+options(knitr.table.format = "html")
+options(max.print="75")
+opts_chunk$set(echo=FALSE,
+	             cache=FALSE,
+               prompt=FALSE,
+               tidy=TRUE,
+               comment=NA,
+               message=FALSE,
+               warning=FALSE)
+opts_knit$set(width=75)
+
+## connect to db
+con <- neo4j_api$new(
+  url = "http://vmetaneo4j:7474", 
+  user = "neo4j", 
+  password = "sysdiab"
+)
+```
+
+
+
+# General information
+
+-----------------
+
+## Neo4j Browser
+
+The neo4j server is located at the [Helmholtz Zentrum München](https://www.helmholtz-muenchen.de) and is currently under heavy developement. Therefore a stable and public version of the project is not available at this point in time. To explore our preliminary graph-DB please visit the web-based [neo4j browser](http://vmetaneo4j:7474/browser/). This browser is only reachable from within the Helmholtz network.
+
+
+
+## Data Model
+
+![Click for details.](`r codes.makepath("neo4jserver/misc/data_model/data_model_current.png")`)
+
+
+
+## Statistics {.tabset}
+
+This database is using Neo4j Version `r con$get_version()`.
+
+### General
+
+<div style="width: 100%; float: left;">
+<div style="width: 45%; float: left;">
+
+```{r stats_general, echo=F, eval=T}
+## number of nodes
+n_nodes <- "MATCH (n) RETURN count(n) as count" %>%  call_neo4j(con) %>% .$count %>% .$value
+## number of relationships
+n_rel <-"MATCH ()-->() RETURN count(*)" %>%  call_neo4j(con) %>% .$count %>% .$value
+## combine in df
+df <- rbind(c("nodes",n_nodes),c("edges",n_rel)) 
+
+colnames(df) <- c("type","n")
+####### TYPES
+## number of data types
+n_node_types <- nrow(con$get_labels())
+## number of relationship types
+n_rel_types <- nrow(con$get_relationships())
+## combine in df
+df <- rbind(df, c("nodes types",n_node_types),c("# edge types",n_rel_types)) 
+
+####### mQTLS
+df <-"MATCH (n:mQTL) RETURN count(n) as count" %>%  
+  call_neo4j(con) %>% 
+  .$count %>% .$value %>% 
+  c("mQTLs",.) %>% 
+  rbind(df,.)
+
+df <-"MATCH (n:SNP) RETURN count(n) as count" %>%  
+  call_neo4j(con) %>% 
+  .$count %>% .$value %>% 
+  c("SNPs",.) %>% 
+  rbind(df,.)
+
+df <-"MATCH (n:eQTL) RETURN count(n) as count" %>%  
+  call_neo4j(con) %>% 
+  .$count %>% .$value %>% 
+  c("eQTLs",.) %>% 
+  rbind(df,.)
+
+df <-"MATCH (n:traitQTL) RETURN count(n) as count" %>%  
+  call_neo4j(con) %>% 
+  .$count %>% .$value %>% 
+  c("traitQTLs",.) %>% 
+  rbind(df,.)
+
+df <-"MATCH (n:organism) RETURN count(n) as count" %>%  
+  call_neo4j(con) %>% 
+  .$count %>% .$value %>% 
+  c("organism",.) %>% 
+  rbind(df,.)
+
+df <-"MATCH (n:sampleType) RETURN count(n) as count" %>%  
+  call_neo4j(con) %>% 
+  .$count %>% .$value %>% 
+  c("sample types",.) %>% 
+  rbind(df,.)
+
+datatable(df,rownames= FALSE,style = 'default',class = 'stripe',caption = "General stats", options = list(dom="t"))
+```
+</div>
+</div>
+
+
+
+### Labels
+
+
+<div style="width: 100%; float: left;">
+<div style="width: 45%; float: left;">
+
+```{r stats_labels, echo=F, eval=T}
+## number of data types
+node_types <- "CALL apoc.meta.stats() YIELD labels RETURN labels" %>% 
+  call_neo4j(con) %>% 
+  .$labels %>% 
+  data.frame() %>% 
+  select(noquote(order(colnames(.)))) %>% 
+  t() %>%  data.frame() %>% rownames_to_column("label") %>% 
+  `colnames<-`(c("label","count"))  
+
+
+DT::datatable(node_types,rownames=F, class = 'hover ',extensions = 'FixedColumns',
+  options = list(
+  scrollX = TRUE,
+  scrollCollapse = TRUE, columnDefs = list(list(className = 'dt-left', targets = "_all"))
+))
+```
+
+</div>
+</div>
+
+### Relationships
+
+
+<div style="width: 100%; float: left;">
+<div style="width: 45%; float: left;">
+
+```{r stats_relationships, echo=F, eval=T}
+## number of data types
+rel_types <- "CALL apoc.meta.stats() YIELD relTypesCount RETURN relTypesCount" %>% 
+  call_neo4j(con) %>% 
+  .$relTypesCount %>% 
+  data.frame() %>% 
+  select(noquote(order(colnames(.)))) %>% 
+  t() %>% data.frame() %>% rownames_to_column("label") %>% 
+  `colnames<-`(c("label","count")) 
+
+
+
+DT::datatable(rel_types,rownames=F, class = 'hover ',extensions = 'FixedColumns',
+  options = list(
+  scrollX = TRUE,
+  scrollCollapse = TRUE, columnDefs = list(list(className = 'dt-left', targets = "_all"))
+))
+```
+
+</div>
+</div>
+
+### Relationship Types
+
+
+```{r stats_relationship_types, echo=F, eval=T}
+## number of data types
+rel_types <- "CALL apoc.meta.stats() YIELD relTypes RETURN relTypes" %>% 
+  call_neo4j(con) %>% 
+  .$relTypes 
+
+names <- colnames(rel_types)
+
+
+rel_types <- rel_types %>%
+  t() %>% data.frame() %>% `colnames<-`(c("count")) %>% transmute(pattern=names,count) 
+
+
+DT::datatable(rel_types,rownames=F, class = 'hover ',extensions = 'FixedColumns',
+  options = list(
+  scrollX = TRUE,
+  scrollCollapse = TRUE, columnDefs = list(list(className = 'dt-left', targets = "_all"))
+))
+
+# kable(rel_types,align = c("c")) %>%
+#   kable_styling(full_width = F,position = "left")
+```
+
+### Constraints
+
+```{r stats_constraints, echo=F, eval=T, warning=F}
+## number of data types
+constraints <- con$get_constraints() %>% data.frame() %>% arrange(.,label) %>% 
+  `colnames<-`(c("property_keys","label","constraint")) 
+
+constraints <- con$get_index() %>% data.frame() %>% select(-labels) %>% arrange(.,label) %>% full_join(.,constraints,by = "label") %>% transmute(label, property_keys=property_keys.x,constraint)
+
+
+DT::datatable(constraints,rownames=F, class = 'hover ',extensions = 'FixedColumns',
+  options = list(
+  scrollX = TRUE,
+  scrollCollapse = TRUE, columnDefs = list(list(className = 'dt-left', targets = "_all"))
+))
+
+```
+
+<!-- ### Degree -->
+
+<!-- ```{r stats_degree, echo=F, eval=T} -->
+<!-- ## number of data types -->
+<!-- degree <- "MATCH (p) RETURN size((p)--()) AS degree " %>%  -->
+<!--   call_neo4j(con) %>%  -->
+<!--   .$degree %>%  -->
+<!--   data.frame() %>%  -->
+<!--   select(noquote(order(colnames(.)))) %>%  -->
+<!--   t() %>%  -->
+<!--   `colnames<-`(c("count"))  -->
+
+
+
+<!-- kable(node_types,align = c("c")) %>% -->
+<!--   kable_styling(full_width = F,position = "left") -->
+<!-- ``` -->
+
+# Getting started
+
+-----------------
+
+## Quick start Cypher
+
+## Quick start R {.tabset}
+
+### Rneo4j
+
+- deprecated package
+- not available in CRAN 
+- HOWEVER, seems to be faster than neo4r package
+- setup code written with this package/syntax
+
+**R code snippet:** 
+
+```{r sh_RNeo4j, echo=TRUE, eval=FALSE}
+#load packages
+library(RNeo4j)
+
+#connect to database
+db_addr <- "http://vmetaneo4j:7474"
+db = startGraph(db_addr,username = "neo4j" ,password = "neo4j")
+# query
+query <- "MATCH (g:gene) RETURN count(g) AS gene_nodes"
+# Retrieve Cypher query results as a data frame
+n_genes <- cypher(db,query)
+```
+
+### neo4r [**NEW**]
+
+- under active development 
+- designed to work with pipes
+- results returned as tibbles whenever possible
+- designed to work smoothly with packages such as `dplyr`,`purrr`and graph packages such as `igraph`
+ and `visNetwork`
+ 
+ 
+ **R code snippet:** 
+
+```{r sh_neo4r, echo=TRUE, eval=FALSE}
+#load packages
+library(neo4r)
+
+## connect to db
+con <- neo4j_api$new(
+  url = "http://vmetaneo4j:7474", 
+  user = "neo4j", 
+  password = "neo4j"
+)
+# Call Neo4J API and return the result as row
+n_genes <- "MATCH (g:gene) RETURN count(g) AS gene_nodes" %>% call_neo4j(con = con) 
+```
+
+
+# Developer documentation 
+
+-----------------
+
+## Get Neo4j
+
+### Step1: Install Neo4j
+
+### Step 2: neo4j.conf configuration
+
+#### General 
+
+- set path for data import (dbms.directories.import)
+- authentication? (dbms.security.auth_enabled)
+- configure memory
+    + heap (dbms.memory.heap.initial_size, dbms.memory.heap.max_size)
+    + page cache (dbms.memory.pagecache.size)
+- connector settings to make neo4j available    
+    + dbms.connectors.default_listen_address=0.0.0.0
+    + dbms.connector.[bolt|http|https].listen_address
+
+#### Procedures 
+
+- dbms.security.procedures.unrestricted=algo.*,apoc.*
+    + download `graph-algorithms-algo-[version].jar` and `apoc-[version]-all.jar` from the matching release 
+    + copy it into the $NEO4J_HOME/plugins directory
+
+#### Transaction log
+
+- dbms.tx_log.rotation.retention_policy=false
+    + important to avoid multiple GB worth of logs accumulating
+- dbms.directories.tx_log=/localscratch/tx_logs
+
+
+#### Replanning
+
+- cypher.min_replan_interval=2h
+- cypher.statistics_divergence_threshold=1.0
+
+## Fill the DB {.tabset}
+
+### Rscript 
+
+> The databse can easily be filled from scratch in 3-5 hrs using raw data files. Please read the following prerequisites and instructions carefully. 
+
+#### Prerequisites
+
+1. Access to the Duke Dropbox 
+    - contains the raw data
+    - ask Maria or Matthias
+2. Access to the gitlab repository "neo4jserver"
+    - ask Jan
+    - contains scripts
+4. Ensure that the custom functions `data.makepath()` and `codes.makepath()` are loaded in R
+3. Checkout repository to location of choice on your system (further referred to as `$NEO4JSERVER`)
+    - must be child of directory pointed to by codes.makepath()
+4. Copy data folder to location of choice 
+    - must be child of directory pointed to by data.makepath()
+    - e.g. `$NEO4JSERVER/data/`
+    - data folder MUST be located on same server as neo4j instance (for LOAD CSV function to work)
+5. Tell neo4j where to look for data
+    - set path for data import in neo4j.conf 
+    - `dbms.directories.import = $NEO4JPATH/data/`
+
+    
+
+#### Running setup.R
+
+> In order to ensure that the script does not fail, make sure that all paths definied in Section 1. point to the right directories. Finally, setup.R can be executed via Rstudio or command line `Rscript $NEO$JSERVER/code/setup/setup.R`.
+
+Setup.R is the main script that fills the database, it can be structered into following sections:
+Note: Helper functions are defined in `$NEO4JSERVER/code/toLoad/setupFunctions.R`.
+
+1. PATHS
+    - data: path to data repository (defaults to `$NEO4JSERVER/data/`)
+    - code: path to git "code" repository (defaults to `$NEO4JSERVER/code/`)
+    - log_path: path to folder where log files are generated (defaults to `$NEO4JSERVER/log/`)
+    - db_addr: address of neo4j instance e.g. `http://localhost:7474/db/data/`   
+
+2. SETUP
+    - setting working directory
+    - creating log files
+        - log: progress information 
+        - err: data inconsistencies or errors etc. 
+    - load functions located in $NEO4JSERVER/code/toLoad/
+    - connecting and CLEARING database (fresh start)
+    - definition of index and uniqueness for node labels
+    
+3. FILL DB
+    - calls scripts that sequentially fill the db 
+    - order of execution should only be if absouloutely necessary
+        - may depend on input from others
+
+
+
+
+### Database Dump
+
+####  PART 1 (remote)
+
+1. Connect to vmetaneo4j via ssh and go to the Neo4j Home-directory 
+
+    __cd neo4j/sysdiab_prod/neo4j-community-3.3.0/__
+
+1. Stop the Neo4j-Server
+
+    __bin/neo4j stop__
+
+1. Dump desired database into .dump file, with following command
+
+    __bin/neo4j-admin dump --database=graph.db --to=/home/alex/neo4j/sysdiab_backups/xxxxx.dump__
+    
+2. Start the Neo4j-Server
+
+    __bin/neo4j start__
+    
+2. Make dump availible (via Seafile, link etc)
+
+
+#### PART 2 (local)
+
+0. Download and install neo4j from https://neo4j.com/
+
+1. Download/get dump and place in directory of your choice
+
+2. Stop your Neo4j-Server 
+
+    __bin/neo4j stop__
+
+3. Run following command from your Neo4j Home-directory^\*):
+
+    __bin/neo4j-admin load --from=/path/to/xxxxx.dump --database=graph.db --force__
+
+4. Start your Neo4-Server 
+
+    __bin/neo4j start__
+
+^\*) with --force this command will overwrite the whole database
+
+**Note for desktop version:** To load a dump in the desktop version, create a new database in the default project, and then go "Manage" -> "Terminal". The commands above should work the same way.
+
+# Data and Format conventions
+
+-----------------
+
+## Quatitative trait loci (QTLs)
+
+### eQTL {.tabset}
+
+#### Data sources
+
+#### Data format
+
+### mQTL {.tabset}
+
+#### Data sources
+
+#### Data format
+
+### traitQTL {.tabset}
+
+#### Data sources
+
+#### Data format
+
+# About the project
+
+-----------------
+
+<!-- ## Syntax highlighting -->
+
+<!-- Here is a sample code chunk, just to show that syntax highlighting works as expected. -->
+
+<!-- ```{r sh, echo=TRUE, eval=TRUE} -->
+<!-- library(ggplot2) -->
+<!-- library(dplyr) -->
+<!-- not_null <- function (v) { -->
+<!--   if (!is.null(v)) return(paste(v, "not null")) -->
+<!-- } -->
+<!-- data(iris) -->
+<!-- tab <- iris %>% -->
+<!--   group_by(Species) %>% -->
+<!--   summarise(Sepal.Length = mean(Sepal.Length), -->
+<!--             Sepal.Width  = mean(Sepal.Width), -->
+<!--             Petal.Length = mean(Petal.Length), -->
+<!--             Petal.Width  = mean(Petal.Length)) -->
+<!-- ``` -->
+
+
+<!-- ## Verbatim -->
+
+<!-- Here is the structure of the `iris` dataset. -->
+
+<!-- ```{r iris_str, echo=TRUE} -->
+<!-- str(iris) -->
+<!-- ``` -->
+
+<!-- And blockquote : -->
+
+<!-- > Oh ! What a nice blockquote you have here. Much more wonderful than a classical Lorem Ipsum, really. -->
+<!-- And we could also [include links](https://github.com/juba/rmdformats) or simply URLs like this : https://github.com/juba/rmdformats -->
+
+<!-- ## Table -->
+
+<!-- Here is a sample table output. -->
+
+<!-- ```{r iris_table} -->
+<!-- kable(tab) -->
+<!-- ``` -->
+
+<!-- Here is a sample `DT:datatable` output. -->
+
+<!-- ```{r iris_dt} -->
+<!-- DT::datatable(tab) -->
+<!-- ``` -->
+
+
+
+<!-- Here we display a crosstab displayed in several different ways with a "pills" -->
+<!-- interface. To do this, just pass your `table()` result to the `pilltabs()` -->
+<!-- function. -->
+
+<!-- ```{r iris_pilltabs, results="asis"} -->
+<!-- iris$seplc <- cut(iris$Sepal.Length,3) -->
+<!-- tab <- table(iris$Species, iris$seplc) -->
+<!-- pilltabs(tab) -->
+<!-- ``` -->
+
+<!-- # Mathjax -->
+
+<!-- An incredibly complex equation : -->
+
+<!-- $$ y = \sqrt{\frac{1}{x}} $$ -->
+
+
+<!-- # Figures -->
+
+<!-- Here is an histogram. -->
+
+<!-- ```{r iris_hist} -->
+<!-- ggplot(data=iris) + -->
+<!--     geom_histogram(aes(x=Petal.Width)) + -->
+<!--     facet_grid(Species~.) -->
+<!-- ``` -->
+
+<!-- And a wonderful scatterplot, with a caption. -->
+
+<!-- ```{r iris_scatter1, fig.cap="This is a caption"} -->
+<!-- ggplot(data=iris) + geom_point(aes(x=Petal.Width, y=Petal.Length, color=Species)) -->
+<!-- ``` -->
+
+
+<!-- <div style="width: 45%; float: right;"> -->
+
+<!-- ```{r , echo = FALSE, eval=F} -->
+<!-- ####### SPECIFIC -->
+
+<!-- n_mQTL <-"MATCH (n:mQTL) RETURN count(n) as count" %>%   -->
+<!--   call_neo4j(con) %>%  -->
+<!--   .$count %>% .$value  -->
+
+<!-- n_SNP <-"MATCH (n:SNP) RETURN count(n) as count" %>%   -->
+<!--   call_neo4j(con) %>%  -->
+<!--   .$count %>% .$value  -->
+
+<!-- n_gene <-"MATCH (n:gene) RETURN count(n) as count" %>%   -->
+<!--   call_neo4j(con) %>%  -->
+<!--   .$count %>% .$value  -->
+
+<!-- n_metabo <-"MATCH (n:metMeasured) RETURN count(n) as count" %>%   -->
+<!--   call_neo4j(con) %>%  -->
+<!--   .$count %>% .$value  -->
+
+
+<!-- #  -->
+<!-- n_SNP_linkBOTH <-"MATCH (:mQTL)<-[:HIT]-(n:SNP)-[:HIT|MAP]-(a) where ANY (x IN ['eQTL','gene'] WHERE x IN labels(a)) RETURN count(distinct n.sid) as count" %>%  call_neo4j(con) %>% .$count %>% .$value -->
+<!-- #  -->
+<!-- n_gene_metabo_aggr <-"MATCH (:mQTL)<-[:HIT]-(:SNP)<-[:MAP]-(a:gene) with collect(a.sid) as gene -->
+<!-- MATCH (:mQTL)<-[:HIT]-(:SNP)-[:HIT]->(:eQTL)-[:HIT]->(g:gene) with collect(g.sid)+gene as gene2 -->
+<!-- unwind gene2 as ge -->
+<!-- RETURN size(collect(distinct ge)) as count" %>%  call_neo4j(con) %>% .$count %>% .$value -->
+
+<!-- #  -->
+<!-- n_metabo_gene_aggr <-"MATCH (m:metMeasured)<-[:HIT]-(:mQTL)<-[:HIT]-(:SNP)<-[:MAP]-(:gene) with collect(m.sid) as metabo -->
+<!-- MATCH (m:mQTL)<-[:HIT]-(:SNP)-[:HIT]->(:eQTL)-[:HIT]->(:gene) with collect(m.sid)+metabo as metabo2 -->
+<!-- unwind metabo2 as me -->
+<!-- RETURN size(collect(distinct me)) as count" %>%  call_neo4j(con) %>% .$count %>% .$value -->
+<!-- #  -->
+<!-- n_metabo_gene_eQTL <-"MATCH (m:metMeasured)<-[:HIT]-(:mQTL)<-[:HIT]-(:SNP)-[:HIT]->(:eQTL)-[:HIT]->(:gene) RETURN size(collect(distinct m.sid)) as count" %>%  call_neo4j(con) %>% .$count %>% .$value -->
+
+<!-- # n_SNP_gene <-"MATCH (n:SNP)-[:HIT|MAP]-(a) where ANY (x IN ['eQTL','gene'] WHERE x IN labels(a)) -->
+<!-- # RETURN count(distinct n.sid) as count" %>% call_neo4j(con)  %>% .$count %>% .$value -->
+
+<!-- n_SNP_onlyHIT <-"MATCH (s:SNP)-[:HIT]->(:eQTL)-[:HIT]->(:gene) where not (s)-[:MAP]-() return count(distinct s.sid)" %>% call_neo4j(con)  %>% .$count %>% .$value -->
+
+<!-- n_SNP_onlyMAP <-"MATCH (s:SNP)-[:MAP]-(:gene) where not (s)-[:HIT]->(:eQTL)-[:HIT]-() return count(distinct s.sid)" %>% call_neo4j(con)  %>% .$count %>% .$value -->
+
+<!-- n_SNP_metabo <-"MATCH (s:SNP)-[:HIT]->(:mQTL) return count(distinct s.sid)" %>% call_neo4j(con)  %>% .$count %>% .$value -->
+
+<!-- df <- data.frame(matrix(ncol = 3,nrow = 15,dimnames = list(list=c(),list=c("label","n","%total")))) -->
+
+<!-- df[1,] <- c("gene (metabo)",n_gene_metabo_aggr,round((n_gene_metabo_aggr/n_gene)*100,digits = 3)) -->
+<!-- df[2,] <- c("metabo (gene)",n_metabo_gene_aggr,round((n_metabo_gene_aggr/n_metabo)*100,digits = 3)) -->
+<!-- df[3,] <- c("SNP (metabo-gene)",n_SNP_linkBOTH,round((n_SNP_linkBOTH/n_SNP)*100,digits = 3)) -->
+<!-- #df[4,] <- c("SNP (gene)",n_SNP_gene,n_SNP_gene/n_SNP) -->
+<!-- df[5,] <- c("SNP (gene-only MAP)",n_SNP_onlyMAP,round((n_SNP_onlyMAP/n_SNP)*100,digits = 3)) -->
+<!-- df[6,] <- c("SNP (gene-only HIT)",n_SNP_onlyHIT,round((n_SNP_onlyHIT/n_SNP)*100,digits = 3)) -->
+<!-- df[7,] <- c("SNP (metabo)",n_SNP_metabo,round((n_SNP_metabo/n_SNP)*100,digits = 3)) -->
+
+<!-- datatable(df,rownames= FALSE,style = 'default',class = 'stripe',caption = "Specific stats", options = list(dom="t")) -->
+
+<!-- ``` -->
+<!-- </div> -->

@@ -1,0 +1,4 @@
+USING PERIODIC COMMIT 50000 
+LOAD CSV FROM 'file:///dfe28b3d-9226-4858-b539-07ed3d84b646.csv' AS line 
+CREATE (n:Gene:Latest) 
+SET n.uuid = line[0], n.update_uid = line[1], n.source = line[2], n.taxid = line[3], n.Synonyms = line[4], n.Symbol_from_nomenclature_authority = line[5], n.Symbol = line[6], n.tax_id = line[7], n.Other_designations = line[8], n.Modification_date = line[9], n.sid = line[10], n.type_of_gene = line[11], n.GeneID = line[12], n.LocusTag = line[13], n.map_location = line[14], n.description = line[15], n.Nomenclature_status = line[16], n.dbXrefs = line[17], n.chromosome = line[18], n.Full_name_from_nomenclature_authority = line[19]

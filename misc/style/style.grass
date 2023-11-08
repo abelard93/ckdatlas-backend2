@@ -1,0 +1,140 @@
+
+node {
+  diameter: 50px;
+  color: #A5ABB6;
+  border-color: #9AA1AC;
+  border-width: 2px;
+  text-color-internal: #FFFFFF;
+  font-size: 10px;
+  caption: '{sid}';
+}
+
+relationship {
+  color: #A5ABB6;
+  shaft-width: 1px;
+  font-size: 8px;
+  padding: 3px;
+  text-color-external: #000000;
+  text-color-internal: #FFFFFF;
+  caption: '<type>';
+}
+
+
+relationship.CATALYZES {
+  shaft-width: 2px;
+  color: #60b58b;
+}
+
+
+relationship.HIT {
+  shaft-width: 2px;
+  color: #dcc36f;
+}
+
+
+relationship.PARTICIPATES {
+  shaft-width: 2px;
+  color: #f99ff7;
+}
+
+relationship.GGM {
+  shaft-width: 2px;
+  color: #ff8b33;
+}
+
+relationship.ANNOTATE {
+  shaft-width: 2px;
+  color: #009999;
+}
+
+node.SMPDB {
+  color: #00b3b3;
+  border-color: #009999;
+  text-color-internal: #FFFFFF;
+  caption: '{Name}';
+}
+
+node.SNP {
+  color: #b3e6cb;
+  border-color: #8cd9b1;
+  text-color-internal: #000000;
+  caption: '{chr}';
+}
+
+node.accHMDB {
+  diameter: 45px;
+  color: #2b90d4;
+  border-color: #67bdf6;
+  text-color-internal: #FFFFFF;
+  caption: '{sid}';
+}
+
+node.edgeGGM {
+  color: #ff9a4d;
+  border-color: #ff8b33;
+  text-color-internal: #FFFFFF;
+  caption: '{partialCorr}';
+}
+
+node.gene {
+  color: #6dce9d;
+  border-color: #60b58b;
+  text-color-internal: #FFFFFF;
+  caption: '{Symbol}';
+}
+
+node.gwasHit {
+  color: #e6d498;
+  border-color: #dcc36f;
+  text-color-internal: #FFFFFF;
+  caption: '{pvalue}';
+}
+
+node.metBiGG {
+  color: #fab7f9;
+  border-color: #f99ff7;
+  text-color-internal: #000000;
+  caption: '{metNames}';
+}
+
+node.metHMDB {
+  color: #67bdf6;
+  border-color: #5ba8dc;
+  text-color-internal: #FFFFFF;
+  caption: '{sid}';
+}
+
+node.metMetabolon {
+  color: #ffd96e;
+  border-color: #edba38;
+  text-color-internal: #000000;
+  caption: '{BIOCHEMICAL}';
+}
+
+node.metWCM {
+  color: #edba38;
+  border-color: #cf9717;
+  text-color-internal: #000000;
+  caption: '{sid}';
+}
+
+node.metabolite {
+  color: #fb95af;
+  border-color: #e0839b;
+  text-color-internal: #FFFFFF;
+  caption: '{BIOCHEMICAL}';
+}
+
+node.reBiGG {
+  color: #bf85d6;
+  border-color: #af66cc;
+  text-color-internal: #FFFFFF;
+  caption: '{rxnNames}';
+}
+
+node.source {
+  color: #a5abb6;
+  border-color: #9da3af;
+  text-color-internal: #FFFFFF;
+  caption: '{sid}';
+}
